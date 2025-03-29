@@ -1,0 +1,10 @@
+[package]
+name = "ollama-consumer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { version = "0.11", features = ["json"] }      # For http requests
+tokio = { version = "1", features = ["full"] }           # For runtime asynchoronous tasks
+serde = { version = "1.0", features = ["derive"] }       # This serde and serde_json dependencies are for 
+serde_json = "1.0"                                       # json serialization and deserialization
