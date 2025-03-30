@@ -8,3 +8,4 @@ reqwest = { version = "0.11", features = ["json"] }      # For http requests
 tokio = { version = "1", features = ["full"] }           # For runtime asynchoronous tasks
 serde = { version = "1.0", features = ["derive"] }       # This serde and serde_json dependencies are for 
 serde_json = "1.0"                                       # json serialization and deserialization
+anyhow = "1.0.97"
