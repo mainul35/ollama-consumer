@@ -52,30 +52,38 @@ fn get_input_prompt() -> String {
 async fn main() -> anyhow::Result<()> {
     let url = "http://localhost:11434/api/generate";
 
-    let mut prompt = get_input_prompt();
-    while prompt.is_empty() {
-        println!("Prompt cannot be empty. Please enter a valid prompt.");
-        prompt = get_input_prompt();
-        
+    loop {
+        let mut prompt = get_input_prompt();
+
+        if prompt.to_lowercase() == "quit" || prompt.to_lowercase() == "exit" {
+            println!("Exiting the program. Goodbye!");
+            break;
+        }
+
+        while prompt.is_empty() {
+            println!("Prompt cannot be empty. Please enter a valid prompt.");
+            prompt = get_input_prompt();
+            
+        }
+    
+        let request_data = RequestData {
+            model: "qwen2.5-coder:14b".to_string(),
+            prompt: prompt,
+        };
+    
+        // Make a POST request
+        let client = reqwest::Client::new();
+        let response = client.post(url)
+            .json(&request_data)
+            .send()
+            .await?;
+    
+        // Deserialize the JSON response
+        let response_text = response.text().await?;
+    
+        let result = concatenate_responses(&response_text);
+        println!("{}", result);
     }
-
-    let request_data = RequestData {
-        model: "qwen2.5-coder:14b".to_string(),
-        prompt: prompt,
-    };
-
-    // Make a POST request
-    let client = reqwest::Client::new();
-    let response = client.post(url)
-        .json(&request_data)
-        .send()
-        .await?;
-
-    // Deserialize the JSON response
-    let response_text = response.text().await?;
-
-    let result = concatenate_responses(&response_text);
-    println!("{}", result);
 
     Ok(())
 }
