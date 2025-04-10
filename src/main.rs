@@ -1,3 +1,4 @@
+use futures::StreamExt;  // Enables `.next()` on streams
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 
@@ -15,14 +16,15 @@ struct ResponseChunk {
     done: bool,
 }
 
+// This method works to return all the response at once, currently not in use
 fn concatenate_responses(json_stream: &str) -> String {
     let mut full_response = String::new();
-    
+
     for line in json_stream.lines() {
         if line.trim().is_empty() {
             continue;
         }
-        
+
         match serde_json::from_str::<ResponseChunk>(line) {
             Ok(chunk) => {
                 full_response.push_str(&chunk.response);
@@ -36,7 +38,7 @@ fn concatenate_responses(json_stream: &str) -> String {
             }
         }
     }
-    
+
     full_response
 }
 
@@ -67,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
         }
     
         let request_data = RequestData {
-            model: "qwen2.5-coder:14b".to_string(),
+            model: "deepseek-r1:14b".to_string(),
             prompt: prompt,
         };
     
@@ -79,11 +81,37 @@ async fn main() -> anyhow::Result<()> {
             .await?;
     
         // Deserialize the JSON response
-        let response_text = response.text().await?;
-    
-        let result = concatenate_responses(&response_text);
-        println!("{}", result);
-    }
+        let mut stream = response.bytes_stream();
+        let mut full_response = String::new();
 
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+
+            // Parse each JSON chunk
+            for line in chunk_str.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                match serde_json::from_str::<ResponseChunk>(trimmed) {
+                    Ok(chunk) => {
+                        print!("{}", chunk.response);
+                        io::stdout().flush()?;
+                        full_response.push_str(&chunk.response);
+
+                        if chunk.done {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Skipping mulformed chunk: {}", e);
+                    }
+                }
+            }
+        }
+        // println!("{}", result);
+        println!("\n\nFull response collected: {} chars", full_response.len());
+    }
     Ok(())
 }
